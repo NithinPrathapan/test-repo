@@ -1,164 +1,99 @@
 import { error, log } from "console";
-import express from "express"
-import fs, { writeFileSync } from "fs"
+import express from "express";
+import fs, { writeFileSync } from "fs";
 import { dirname } from "path";
 import { json } from "stream/consumers";
 import { fileURLToPath } from "url";
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const filePath = "data.json"
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const filePath = "data.json";
 
-const app = express()
-app.use(express.json())
+const app = express();
+app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.status(200).send("sucess")
-})
+app.get("/", (req, res) => {
+  res.status(200).send("sucess");
+});
 
-app.post('/add', (req, res) => {
-    console.log(req.body);
-    fs.readFile(filePath, (error, data) => {
-        let contents = error ? [] : JSON.parse(data)
-        console.log(contents);
-        contents.push(req.body)
-        fs.writeFile(filePath, JSON.stringify(contents), (error) => {
-            if (error) {
-                console.log("error");
-                res.status(204).send("error")
-            }
-            res.status(200).send("added")
-        })
-
-    })
-})
+app.post("/add", (req, res) => {
+  console.log(req.body);
+  fs.readFile(filePath, (error, data) => {
+    let contents = error ? [] : JSON.parse(data);
+    console.log(contents);
+    contents.push(req.body);
+    fs.writeFile(filePath, JSON.stringify(contents), (error) => {
+      if (error) {
+        console.log("error");
+        res.status(204).send("error");
+      }
+      res.status(200).send("added");
+    });
+  });
+});
 
 app.put("/update/:id", async (req, res) => {
-    console.log('fn called');
-    console.log(req.body,'req body');
+  console.log("Function called");
 
-    const { id } = req.params
-    const {name,age}=req.query
-    console.log(id);
+  const { id } = req.params; // Extract ID from URL params
+  const { name, age } = req.query; // Extract name & age from query params
 
-    fs.readFile(filePath, (err, data) => {
-        // const arr = err ? res.status(200).send("No Data") : JSON.parse(data)
-        // arr.forEach((e) => {
-        //     if (e.name == name && e.age == age) {
-        //         e.name = req.body.name
-        //         e.age = req.body.age
-        //         fs.writeFileSync(filePath, JSON.stringify(arr))
-        //     } else {
-        //         res.status(200).send("Not found")
-        //     }
-        // })
-        let arr = []
-        if (err) {
-            return res.status(302).json({ success: false, message: "unexpected error while reading file" })
+  console.log("Received ID:", id);
+  console.log("Received Query Params:", { name, age });
 
-        } else {
-            try {
-                arr = JSON.parse(data)
-                console.log(arr, 'array object after pushng');
+  fs.readFile(filePath, "utf8", (err, data) => {
+    if (err) {
+      return res.status(500).json({
+        success: false,
+        message: "Error reading data file",
+      });
+    }
 
-            } catch (error) {
-                console.log(error);
+    try {
+      let arr = JSON.parse(data); // Parse JSON file
 
-            }
-            let findData = arr.find((item) => item.id === id);
+      // Find the data by ID
+      let findData = arr.find((item) => item.id === id);
 
-            console.log(findData, 'found data');
-            findData.name = req.body.name
-            findData.age = req.body.age
-            console.log(findData, "after updation"
-            );
+      console.log(findData); // check the data exist
+      //   if exist
 
-            
-            let filterData= arr.filter((item)=>item.id!==id)
-            console.log(filterData,'lknkljkjl');
-            
-            
-            console.log(arr,'array');
+      if (!findData) {
+        //if not exist
+        return res.status(404).json({
+          success: false,
+          message: "No data found with the given ID",
+        });
+      }
 
-            if (findData) {
-                arr.forEach((e) => {
+      // Update the found record with query parameters
+      if (name) findData.name = name;
+      if (age) findData.age = parseInt(age); // Ensure age is a number
 
-
-                });
-                return res.status(200).json({ success: true, message: "data found success", data: findData })
-            } else {
-                return res.status(302).json({ success: false, message: "no data found" })
-            }
+      // Write the updated data back to the file
+      fs.writeFile(filePath, JSON.stringify(arr, null, 2), (writeErr) => {
+        if (writeErr) {
+          return res.status(500).json({
+            success: false,
+            message: "Error writing data file",
+          });
         }
-    })
-})
 
+        return res.status(200).json({
+          success: true,
+          message: "Data updated successfully",
+          data: findData,
+        });
+      });
+    } catch (parseError) {
+      return res.status(500).json({
+        success: false,
+        message: "Error parsing data file",
+      });
+    }
+  });
+});
 
-
-
-// app.put('/update/:id',(req,res)=>{
-//     const id=Number(req.params.id)
-//     const newData=req.body
-//     console.log(newData);
-
-//     fs.readFile(filePath,(error,data)=>{
-//         let contents=[]
-//         if(!error){
-//             try{
-//                 contents=JSON.parse(data)
-//             }catch(err){
-//                 res.status(500).send("error")
-//             }
-//         }
-
-//         let item=false
-//         contents=contents.map(item=>{
-//             if(item.id===id){
-//                 item=true
-//                 return{...item,...newData}
-//             }
-//             return item
-//         })
-//         if(!item){
-//             res.status(400).send("not found")
-//         }
-//         fs.writeFile(filePath,JSON.stringify(contents),(error)=>{
-//             if(error){
-//                 console.log("error in writefile");
-//                 res.status(500).send("update error")
-
-//             }
-//             res.status(200).send("update sucessfull")
-//         })
-
-//     })
-
-// })
-
-
-const port = 3000
+const port = 3000;
 app.listen(port, () => {
-    console.log(`server is running on http://localhost:${port}`);
-
-})
-
-
-
-
-
-
-
-// async function connectDB() {
-//     try{
-//         await mongoose.connect("mongodb://localhost:27017/todo")
-//         console.log("db connected");
-//         app.listen(3000,()=>{
-//             console.log("http://localhost:3000");
-            
-//         })
-        
-//     }catch(error){
-//         console.log("db conn error",error);
-        
-//     }
-    
-// }
+  console.log(`server is running on http://localhost:${port}`);
+});
